@@ -3,7 +3,7 @@ import path from 'path';
 import router from './routes';
 
 const app = express();
-const port = 8080;
+const port = 3000;
 
 app.use(express.static(path.join(__dirname, '../../front/dist')));
 app.get('/', (req, res) => {

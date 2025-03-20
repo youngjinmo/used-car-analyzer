@@ -41,9 +41,22 @@ function parseEncarUrl(url: string): string {
     return url.split("?")[0];
 }
 
+async function parseBrowser(): Promise<Browser> {
+    return await puppeteer.launch({
+        headless: 'shell',
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
+        ],
+    });
+}
+
 // 엔카 차량 상세 페이지 크롤링
 async function scrapeCarInfo(url: string): Promise<CarInfo> {
-    const browser: Browser = await puppeteer.launch({ headless: false });
+    const browser: Browser = await parseBrowser();
 
     try {
         // 1️⃣ 엔카 차량 상세 페이지 열기
@@ -120,7 +133,7 @@ async function scrapeCarInfo(url: string): Promise<CarInfo> {
 // 성능기록부 크롤링
 async function scrapeCarHistory(carId: string): Promise<CarHistory> {
     const url = `https://www.encar.com/md/sl/mdsl_regcar.do?method=inspectionViewNew&carid=${carId}`;
-    const browser: Browser = await puppeteer.launch({ headless: false });
+    const browser: Browser = await parseBrowser();
 
     const result: CarHistory = {
         year: "모름",
@@ -303,7 +316,7 @@ async function scrapeCarHistory(carId: string): Promise<CarHistory> {
 // 보험이력 크롤링
 async function scrapeInsuranceHistory(carId: string): Promise<InsuranceHistory> {
     const url = `https://fem.encar.com/cars/report/accident/${carId}`;
-    const browser: Browser = await puppeteer.launch({ headless: false });
+    const browser: Browser = await parseBrowser();
 
     const result: InsuranceHistory = {
         ownerChangedCnt: 0,
