@@ -135,20 +135,21 @@ async function scrapeCarHistory(carId: string): Promise<CarHistory> {
     const url = `https://www.encar.com/md/sl/mdsl_regcar.do?method=inspectionViewNew&carid=${carId}`;
     const browser: Browser = await parseBrowser();
 
+    const undefinedData = "알수없음";
     const result: CarHistory = {
-        year: "모름",
-        carName: "모름",
-        carNumber: "모름",
+        year: undefinedData,
+        carName: undefinedData,
+        carNumber: undefinedData,
         mileage: 0,
-        fuel: "모름",
+        fuel: undefinedData,
         externalHistory: {
-            firstRankExternal: "모름",
-            secondRankExternal: "모름",
+            firstRankExternal: undefinedData,
+            secondRankExternal: undefinedData,
         },
         frameHistory: {
-            aRank: "모름",
-            bRank: "모름",
-            cRank: "모름",
+            aRank: undefinedData,
+            bRank: undefinedData,
+            cRank: undefinedData,
         },
         accidentHistory: false,
         isRent: false,
@@ -159,10 +160,6 @@ async function scrapeCarHistory(carId: string): Promise<CarHistory> {
     try {
         // 엔카 성능기록부 열기
         const page: Page = await browser.newPage();
-        await page.setViewport({
-            width: 1200,
-            height: 750,
-        });
 
         await page.goto(url, { waitUntil: 'domcontentloaded' });
 
@@ -269,7 +266,7 @@ async function scrapeCarHistory(carId: string): Promise<CarHistory> {
 
         // 8. 사고이력 추출
         result.accidentHistory = await page.evaluate(() => {
-            const ulElement: HTMLElement | null = document.querySelector("#bodydiv > div.body > div > div.section_repair > table > tbody > tr:nth-child(1) > td > span.txt_state.on");
+            const ulElement: HTMLElement | null = document.querySelector("#bodydiv > div.body > div > div.section_repair > table > tbody > tr:nth-child(1) > td > span.txt_state");
             if (ulElement) {
                 return ulElement.innerText.trim() === "있음";
             }
@@ -278,16 +275,17 @@ async function scrapeCarHistory(carId: string): Promise<CarHistory> {
 
         // 9. 용도변경 추출
         result.isRent = await page.evaluate(() => {
-            const ulElement: HTMLElement | null = document.querySelector("#bodydiv > div.body > div > div.section_total > table > tbody > tr:nth-child(7) > td:nth-child(2) > span.txt_state.on");
+            const ulElement: HTMLElement | null = document.querySelector("#bodydiv > div.body > div > div.section_total > table > tbody > tr:nth-child(7) > td:nth-child(2) > span.txt_state");
             if (ulElement) {
-                return ulElement.innerText.trim() === "있음";
+                return ulElement.innerText.trim() === "없음";
             }
             throw new Error('Could not find rent history');
         });
 
         // 10. 리콜대상 여부 추출
         result.isRecallTarget = await page.evaluate(() => {
-            const ulElement: HTMLElement | null = document.querySelector("#bodydiv > div.body > div > div.section_total > table > tbody > tr:nth-child(10) > td:nth-child(2) > span.txt_state.on");
+            const ulElement: HTMLElement | null =
+                document.querySelector("#bodydiv > div.body > div > div.section_total > table > tbody > tr:nth-child(10) > td:nth-child(2) > span.txt_state")
             if (ulElement) {
                 return ulElement.innerText.trim() === "해당";
             }
@@ -295,13 +293,15 @@ async function scrapeCarHistory(carId: string): Promise<CarHistory> {
         });
 
         // 11. 리콜 여부
-        result.hasRecall = await page.evaluate(() => {
-            const ulElement: HTMLElement | null = document.querySelector("#bodydiv > div.body > div > div.section_total > table > tbody > tr:nth-child(10) > td:nth-child(3) > span");
-            if (ulElement) {
-                return ulElement.innerText.trim() === "이행";
-            }
-            throw new Error('Could not find recall history');
-        });
+        if (result.isRecallTarget) {
+            result.hasRecall = await page.evaluate(() => {
+                const ulElement: HTMLElement | null = document.querySelector("#bodydiv > div.body > div > div.section_total > table > tbody > tr:nth-child(10) > td:nth-child(3) > span");
+                if (ulElement) {
+                    return ulElement.innerText.trim() === "이행";
+                }
+                throw new Error('Could not find recall history');
+            });
+        }
 
         console.log("차량성능기록부 크롤링 완료.\n");
         return result;
@@ -326,10 +326,6 @@ async function scrapeInsuranceHistory(carId: string): Promise<InsuranceHistory> 
     try {
         // 엔카 성능기록부 열기
         const page: Page = await browser.newPage();
-        // await page.setViewport({
-        //     width: 1200,
-        //     height: 750,
-        // });
 
         await page.goto(url, {waitUntil: 'domcontentloaded'});
 
@@ -376,7 +372,7 @@ async function parseEncar(url: string): Promise<CarDatas> {
     const carHistories= await scrapeCarHistory(carInfo.carId);
     const insuranceHistories = await scrapeInsuranceHistory(carInfo.carId);
 
-    console.log("🚗 엔카 크롤링 종료.");
+    console.log("🚗 엔카 크롤링 종료 = %o", makeCarDatas(carInfo, carHistories, insuranceHistories));
     return makeCarDatas(carInfo, carHistories, insuranceHistories);
 }
 

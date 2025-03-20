@@ -7,14 +7,14 @@
     <div class="search-box">
       <button id="goEncarBtn" @click="goEncar">엔카 가기</button>
       <input type="text" v-model="carUrl" class="search__input" placeholder="확인하고 싶은 차량의 상세페이지 주소를 붙여넣어주세요.">
-      <button id="heyGptBtn" @click="analyzeCar">살까 말까</button>
+      <button id="heyGptBtn" @click="analyzeCar">Ask GPT</button>
     </div>
 
     <!-- 분석 결과 -->
     <div v-if="responseByGpt" class="result-box">
       <img v-if="carImg" :src="carImg" alt="car image" style="width: 50%; min-width: 100px;">
-      <h2>by ChatGPT</h2>
-      <h4>{{ carTitle }}</h4>
+      <h2>{{ carName }}</h2>
+      <h4>{{ carMeta }}</h4>
       <p>{{ responseByGpt }}</p>
     </div>
   </div>
@@ -29,7 +29,8 @@ export default {
     return {
       carUrl: "",
       carImg: "",
-      carTitle: "",
+      carName: "",
+      carMeta: "",
       responseByGpt: "",
     };
   },
@@ -51,7 +52,10 @@ export default {
         return;
       }
 
-      this.responseByGpt = "분석 중입니다. 잠시만 기다려주세요...";
+      this.carImg = "";
+      this.carName = "";
+      this.carMeta = "";
+      this.responseByGpt = "GPT가 분석 중입니다. 잠시만 기다려주세요...";
 
       // request api
       axios.post(`/api/v1/openai/parse/encar?url=${this.carUrl}`, {
@@ -61,15 +65,20 @@ export default {
         },
       })
           .then((res) => {
-            const carName = res.data.carName || "알수없음";
-            const carYear = res.data.carYear || "알수없음";
-            const carMileage = res.data.carMileage ? Intl.NumberFormat('en-US').format(res.data.carMileage) : "알수없음";
-            const carPrice = res.data.carPrice ? Intl.NumberFormat('en-US').format(res.data.carPrice) : "알수없음";
-            const fuelType = res.data.fuelType || "알수없음";
+            const carName = res.data.carName;
+            if (carName === "알수없음") {
+              this.responseByGpt = "차량 정보를 가져오지 못했습니다.";
+            } else {
+              const carYear = res.data.carYear;
+              const carMileage = Intl.NumberFormat('en-US').format(res.data.carMileage);
+              const carPrice = Intl.NumberFormat('en-US').format(res.data.carPrice);
+              const fuelType = res.data.fuelType;
 
-            this.carImg = res.data.carImg || "./assets/no_car_image_available.png";
-            this.carTitle = `${carName} (${carYear}), ${carMileage}km, ${carPrice}만원, ${fuelType}`;
-            this.responseByGpt = res.data.response || "응답을 가져오지 못했습니다.";
+              this.carImg = res.data.carImg || "./assets/no_car_image_available.png";
+              this.carName = `${carName} (${carYear})`;
+              this.carMeta = `${carMileage}km, ${carPrice}만원, ${fuelType}`;
+              this.responseByGpt = res.data.response || "응답을 가져오지 못했습니다.";
+            }
           })
           .catch((e) => {
             if (e.status === 400) {
