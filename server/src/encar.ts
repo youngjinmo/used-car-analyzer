@@ -61,11 +61,13 @@ async function scrapeCarInfo(url: string): Promise<CarInfo> {
     try {
         // 1️⃣ 엔카 차량 상세 페이지 열기
         const page: Page = await browser.newPage();
-        await page.goto(url, { waitUntil: 'networkidle2' });
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        const encarBtn = "#detailStatus > div.ResponsiveTemplete_box_type__10yIs > div.ResponsiveTemplete_text_image_type__tycpJ > div.ResponsiveTemplete_button_type__pjT76 > button";
+        await page.waitForSelector(encarBtn, { visible: true, timeout: 10000 });
 
         // 1. 엔카 진단 여부 추출
         const encarDiagnosis = await page.evaluate(() => {
-            const diagnosisButton = document.querySelector("#detailStatus > div.ResponsiveTemplete_box_type__10yIs > div.ResponsiveTemplete_text_image_type__tycpJ > div.ResponsiveTemplete_button_type__pjT76 > button");
+            const diagnosisButton = document.querySelector(encarBtn);
             if (diagnosisButton) {
                 return diagnosisButton.textContent?.includes("엔카진단") || false;
             }
@@ -81,13 +83,9 @@ async function scrapeCarInfo(url: string): Promise<CarInfo> {
             if (ulElement) {
                 return ulElement.innerText.slice(5).trim(); // 5번째 인덱스부터 잘라서 반환
             }
-            throw new Error('Could not find car');
-        });
-
-        if (!carId) {
             console.log("❌ 해당 차량 등록번호를 찾을 수 없습니다.\n");
             throw new Error('Could not find car id');
-        }
+        });
 
         // 3. 엔카 차량 판매가격 추출
         const price = await page.evaluate((encarDiagnosis: boolean) => {
@@ -101,10 +99,8 @@ async function scrapeCarInfo(url: string): Promise<CarInfo> {
             }
 
             if (encarDiagnosis) {
-                console.log("1");
                 return parsePrice("#wrap > div > div.Layout_contents__MD95o > div.ResponsiveLayout_wrap__XLqcM.ResponsiveLayout_wide__VYk4x > div.ResponsiveLayout_lead_area__HGM3g > div > div.DetailLeadBottomPc_lead_area__p0V0t > div.DetailLeadBottomPc_price_wrap__XlHcb > p > span");
             } else {
-                console.log("2");
                 return parsePrice("#wrap > div > div.Layout_contents__MD95o > div.ResponsiveLayout_wrap__XLqcM > div.ResponsiveLayout_lead_area__HGM3g > div > div.DetailLeadBottomPc_lead_area__p0V0t > div.DetailLeadBottomPc_price_wrap__XlHcb > p > span");
             }
         }, encarDiagnosis);
@@ -160,8 +156,7 @@ async function scrapeCarHistory(carId: string): Promise<CarHistory> {
     try {
         // 엔카 성능기록부 열기
         const page: Page = await browser.newPage();
-
-        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10000 });
 
         // 요소가 로드될 때까지 대기
         const selector : string = '#bodydiv > div.body > div > div.inspec_carinfo > table > tbody > tr:nth-child(3) > td:nth-child(2)';
@@ -326,12 +321,11 @@ async function scrapeInsuranceHistory(carId: string): Promise<InsuranceHistory> 
     try {
         // 엔카 성능기록부 열기
         const page: Page = await browser.newPage();
-
-        await page.goto(url, {waitUntil: 'domcontentloaded'});
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
 
         // 요소가 로드될 때까지 대기
-        const selector: string = '#wrap > div > div.Layout_contents__MD95o > div:nth-child(2) > div.ReportAccidentSummary_info_summary__7gNID > ul > li:nth-child(3) > span > span:nth-child(2)';
-        await page.waitForSelector(selector, { visible: true, timeout: 5000 });
+        const insuranceCnt: string = '#wrap > div > div.Layout_contents__MD95o > div:nth-child(2) > div.ReportAccidentSummary_info_summary__7gNID > ul > li:nth-child(3) > span > span:nth-child(2)';
+        await page.waitForSelector(insuranceCnt, { visible: true, timeout: 5000 });
 
         // 1. 소유자 변경횟수 추출
         result.ownerChangedCnt = await page.evaluate(() => {
@@ -344,7 +338,7 @@ async function scrapeInsuranceHistory(carId: string): Promise<InsuranceHistory> 
 
         // 2. 보험사고이력(내차피해)
         result.insuranceAccidentCnt = await page.evaluate(() => {
-            const ulElement: HTMLElement | null = document.querySelector("#wrap > div > div.Layout_contents__MD95o > div:nth-child(2) > div.ReportAccidentSummary_info_summary__7gNID > ul > li:nth-child(5) > span > span:nth-child(1)");
+            const ulElement: HTMLElement | null = document.querySelector(insuranceCnt);
             if (ulElement && ulElement.innerText.trim() === "없음") {
                 return 0;
             }

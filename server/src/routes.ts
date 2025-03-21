@@ -80,7 +80,7 @@ router.post('/v1/openai/parse/encar', async (req, res) => {
             console.log("이미 차량이 판매되었거나 삭제되었습니다.");
             res.status(404).json({ result: "not found", message: "차량이 판매되었거나 삭제되었습니다." });
         } else {
-            console.error("❌ 오류 발생: %s", JSON.stringify(error));
+            console.error("❌ 오류 발생: %o", error);
             res.status(500).json({ result: "error", message: error?.message ?? "서버 오류 발생" });
         }
     } finally {
